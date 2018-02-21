@@ -1,21 +1,31 @@
+import './style/main.scss';
 
-import React from 'react'
+import React from 'react';
 import ReactDom from 'react-dom'
+import {BrowserRouter} from 'react-router-dom'
 import {Provider} from 'react-redux'
-import {createStore, applyMiddleware} from 'redux'
 
-import reducer from './reducer'
-import App from './component/app'
-import thunk from './lib/redux-thunk.js'
-import reporter from './lib/redux-reporter.js'
+import createStore from './app/store'
+import App from './components/app'
 
-const store = createStore(reducer, applyMiddleware(thunk, reporter))
+const store = createStore();
 
-let container = document.createElement('div')
-document.body.appendChild(container)
+class Main extends React.Component {
 
-ReactDom.render(
-  <Provider store={store} >
-    <App />
-  </Provider>
-, container)
+    constructor(props) {
+        super(props);
+    }
+
+    render() {
+        return (
+            <Provider store={store}>
+                <BrowserRouter>
+                    <App/>
+                </BrowserRouter>
+            </Provider>
+        )
+    }
+
+}
+
+ReactDom.render(<Main/>, document.getElementById('root'));

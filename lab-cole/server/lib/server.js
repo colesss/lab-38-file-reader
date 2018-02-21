@@ -1,54 +1,61 @@
-'use strict'; 
+'use strict';
 
-const cors = require('cors');
 const morgan = require('morgan');
-const mongoose = require('mongoose');
-mongoose.Promise = require('bluebird');
+const cors = require('cors');
 
+// expressy stuff
 const express = require('express');
-require('dotenv').config();
-const app = express();
+let app = express();
 
-app.use(cors());
+let http = null;
+let isRunning = false;
+
 app.use(morgan('dev'));
+app.use(
+    cors({
+        origin: process.env.CORS_ORIGINS.split(' '),
+        credentials: true,
+    })
+);
 
-// routes for books
-app.use('/api', require('../route/library-router.js'));
+// Our Routes
+app.use(require("../routes/api"));
+app.use(require("../routes/auth"));
 
-// catchall for undefined routes
-app.all('*', (req,res) => res.sendStatus(404));
+// 404 Handler
+app.use("*", (req,res,next) => {
+   res.sendStatus(404);
+   next();
+});
 
-// error middleware
-app.use(require('./error-middleware.js'));
+app.use(require('./middleware/error'));
 
-let server = null;
 module.exports = {
-  start: () => {
-    return new Promise((resolve,reject) => {
-      if(server) {
-        return reject(new Error('Server is already running!'));
-      }
-      server = app.listen(process.env.PORT || 5000, () => {
-        console.log(`Server up on port: ${process.env.PORT}`);
-        resolve();
-      });
-    })
-      .then(() => {
-        mongoose.connect(process.env.MONGODB_URI, {useMongoClient: true});
-      });
-  },
 
-  stop: () => {
-    return new Promise((resolve, reject) => {
-      if(!server) {
-        return reject(new Error('Server is already shut down'));
-      }
-      server.close(() => {
-        server = null;
-        console.log('Server closed');
-        resolve();
-      });
-    })
-      .then(() => mongoose.disconnect());
-  },
-};
+    start: (port) => {
+        let usePort = port || process.env.SERVER_PORT;
+        if ( isRunning ) {
+            throw Error ("Server is already running");
+        }
+        http = app.listen(usePort, () => {
+            isRunning = true;
+            console.log("Server up and running on port", usePort);
+        });
+    },
+
+    stop: () => {
+        if(! isRunning) {
+            throw Error("Server is already off");
+        }
+        if ( ! http ) {
+            throw Error("Invalid Server");
+        }
+
+        http.close( () => {
+           http = null;
+           isRunning = false;
+           console.log("Bye Bye");
+        });
+    }
+
+}
